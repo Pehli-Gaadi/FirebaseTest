@@ -40,10 +40,13 @@ const loginSlice = createSlice({
       console.log('action', action);
       state.userInfo = action.payload;
     },
-    logout: (state, action) => {
-      state.isAuth = initialState.isAuth;
-      state.isLoginPage = initialState.isLoginPage;
-      state.userInfo = initialState.userInfo;
+    logout: (state) => {
+      console.log('Logging out, resetting state');
+      state.isAuth = false;
+      state.isLoginPage = false;
+      state.userInfo = null;
+      state.status = null;
+      state.error = null;
     },
     updateLoginUserInfo: (state, action) => {
       state.isLoading = true;
@@ -62,10 +65,12 @@ const loginSlice = createSlice({
         state.error = action.payload;
       })
       .addCase(getUserProfile.fulfilled, (state, action) => {
+        console.log('getUserProfile.fulfilled payload:', action.payload);
         state.isLoading = false;
         state.status = "succeeded";
         state.isAuth = true;
-        state.userInfo = action.payload.data;
+        state.userInfo = action.payload?.data || action.payload;
+        console.log('Updated state:', { isAuth: state.isAuth, userInfo: state.userInfo });
       })
 
       .addCase(getDealerProfile.pending, (state) => {

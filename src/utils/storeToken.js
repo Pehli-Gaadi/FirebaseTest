@@ -3,8 +3,6 @@ import Cookies from 'js-cookie';
 
 const secretKey = import.meta.env.VITE_CRYTPO_SECRET;
 
-console.log('secretKey', secretKey);
-
 // 🔐 Encrypt data
 const encryptData = (data) => {
   try {
@@ -31,34 +29,58 @@ const decryptData = (ciphertext) => {
 
 // ✅ Set encrypted JWT tokens in cookies with expiry
 export const setTokens = (accessToken, refreshToken) => {
+  try {
+    const encryptedAccessToken = encryptData(accessToken);
+    const encryptedRefreshToken = refreshToken ? encryptData(refreshToken) : null;
 
-  const encryptedAccessToken = encryptData(accessToken);
-  const encryptedRefreshToken = encryptData(refreshToken);
+    // Get expiry from JWT token
+    const decodedToken = JSON.parse(atob(accessToken.split('.')[1]));
+    const expiryDate = new Date(decodedToken.exp * 1000);
+    
+    // Calculate days until expiry
+    const now = new Date();
+    const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
 
-  const accessExpiry = 30;
-  const refreshExpiry = 90;
-
-  if (encryptedAccessToken && encryptedRefreshToken) {
-    Cookies.set('accessToken', encryptedAccessToken, { expires: accessExpiry, path: '/' });
-    Cookies.set('refreshToken', encryptedRefreshToken, { expires: refreshExpiry, path: '/' });
-  } else {
-    console.warn('[setTokens] Failed to encrypt tokens. Nothing stored.');
+    // Set cookies with proper expiry
+    if (encryptedAccessToken) {
+      Cookies.set('accessToken', encryptedAccessToken, { expires: daysUntilExpiry, path: '/' });
+      if (encryptedRefreshToken) {
+        Cookies.set('refreshToken', encryptedRefreshToken, { expires: daysUntilExpiry + 60, path: '/' });
+      }
+      return { expiryDate };
+    }
+  } catch (err) {
+    console.error('[setTokens] Error:', err.message);
   }
+  console.warn('[setTokens] Failed to store tokens.');
+  return null;
 };
 
-// ✅ Get decrypted JWT tokens from cookies
+// ✅ Get decrypted JWT tokens from cookies and check expiry
 export const getTokens = () => {
-  const encryptedAccessToken = Cookies.get('accessToken');
-  const encryptedRefreshToken = Cookies.get('refreshToken');
+  try {
+    const encryptedAccessToken = Cookies.get('accessToken');
 
-  if (!encryptedAccessToken || !encryptedRefreshToken) {
-    console.warn('[getTokens] No tokens found in cookies.');
+    if (!encryptedAccessToken) {
+      console.warn('[getTokens] No access token found in cookies.');
+      return null;
+    }
+
+    const accessToken = decryptData(encryptedAccessToken);
+
+    if (!accessToken) {
+      console.error('[getTokens] Failed to decrypt access token');
+      return null;
+    }
+
+    const encryptedRefreshToken = Cookies.get('refreshToken');
+    const refreshToken = encryptedRefreshToken ? decryptData(encryptedRefreshToken) : null;
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    console.error('[getTokens] Error:', error);
+    return null;
   }
-
-  const accessToken = encryptedAccessToken ? decryptData(encryptedAccessToken) : null;
-  const refreshToken = encryptedRefreshToken ? decryptData(encryptedRefreshToken) : null;
-
-  return { accessToken, refreshToken };
 };
 
 // ❌ Remove tokens from cookies

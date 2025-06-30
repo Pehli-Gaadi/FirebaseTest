@@ -54,22 +54,29 @@ export const getUserProfile = createAsyncThunk(
                     { firebaseToken }
                 );
 
-                console.log("tokenResponse", tokenResponse);
+                console.log("tokenResponse1:", tokenResponse.data);
 
                 // Store tokens in cookies if they exist
-                const accessToken = tokenResponse.data?.data?.accessToken;
-                const refreshToken = tokenResponse.data?.data?.refreshToken;
+                const accessToken = tokenResponse.data?.accessToken;
+                const refreshToken = tokenResponse.data?.refreshToken;
+
+                console.log("Tokens to store:", { accessToken, refreshToken });
 
                 if (accessToken) {
-                    setTokens(accessToken, refreshToken || null);
+                    const result = setTokens(accessToken, refreshToken || null);
+                    console.log("Token storage result:", result);
+                } else {
+                    console.error("No access token received from backend");
                 }
 
                 // Return combined data
-                return {
+                const responseData = {
                     ...userResponse.data,
                     token: accessToken,
                     refreshToken: refreshToken
                 };
+                console.log("Final response data:", responseData);
+                return responseData;
             }
 
             return userResponse.data;
