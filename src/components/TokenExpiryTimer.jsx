@@ -12,16 +12,15 @@ import {
 import { getTokens, removeTokens } from "../utils/storeToken";
 import { jwtDecode } from "jwt-decode";
 import { logout } from "../redux/login/loginSlice";
+import { refreshToken } from "../redux/login/loginService";
 
 const TokenExpiryTimer = () => {
   const dispatch = useDispatch();
   const [timeLeft, setTimeLeft] = useState("");
-
   const [showExpiryDialog, setShowExpiryDialog] = useState(false);
 
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
+  // Move calculateTimeLeft outside useEffect for reusability
+  const calculateTimeLeft = () => {
       const tokens = getTokens();
       
       if (!tokens?.accessToken) {
@@ -56,16 +55,53 @@ const TokenExpiryTimer = () => {
       }
     };
 
+  useEffect(() => {
     // Initial calculation
-    setTimeLeft(calculateTimeLeft());
+    const initialTimeLeft = calculateTimeLeft();
+    setTimeLeft(initialTimeLeft);
+
+    // If token is already expired on mount, show dialog
+    if (initialTimeLeft === "Token Expired") {
+      setShowExpiryDialog(true);
+    }
 
     // Update every second
     const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+      const newTimeLeft = calculateTimeLeft();
+      setTimeLeft(newTimeLeft);
+      
+      // Show dialog when token expires
+      if (newTimeLeft === "Token Expired") {
+        setShowExpiryDialog(true);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, []); // Empty dependency array since calculateTimeLeft is now in component scope
+
+  const handleTokenRefresh = async () => {
+    try {
+      const result = await dispatch(refreshToken()).unwrap();
+      if (result) {
+        setShowExpiryDialog(false);
+        // Start checking timer again
+        const newTimeLeft = calculateTimeLeft();
+        setTimeLeft(newTimeLeft);
+        
+        // If we still don't have valid time left after refresh, logout
+        if (!newTimeLeft || newTimeLeft === "Token Expired") {
+          console.log('Token still invalid after refresh');
+          handleLogout();
+          return;
+        }
+      } else {
+        handleLogout();
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      handleLogout();
+    }
+  };
 
   const handleLogout = () => {
     removeTokens();
@@ -102,8 +138,20 @@ const TokenExpiryTimer = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleLogout} color="primary" variant="contained">
-            Login Again
+          <Button 
+            onClick={handleTokenRefresh} 
+            color="primary" 
+            variant="contained"
+            style={{ marginRight: '8px' }}
+          >
+            Refresh Session
+          </Button>
+          <Button 
+            onClick={handleLogout} 
+            color="secondary" 
+            variant="contained"
+          >
+            Logout
           </Button>
         </DialogActions>
       </Dialog>

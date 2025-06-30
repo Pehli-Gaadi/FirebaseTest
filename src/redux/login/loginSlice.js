@@ -1,5 +1,17 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getUserProfile,getDealerProfile, createUserProfile, updateUserProfile, getUsers, updateUser, deleteUserProfile, loginWithFirebaseToken, sendRefreshToken,getDealerUserProfile } from "./loginService";
+import { 
+  getUserProfile,
+  getDealerProfile, 
+  createUserProfile, 
+  updateUserProfile, 
+  getUsers, 
+  updateUser, 
+  deleteUserProfile, 
+  loginWithFirebaseToken, 
+  sendRefreshToken,
+  getDealerUserProfile,
+  refreshToken
+} from "./loginService";
 import createTransform from "redux-persist/es/createTransform";
 
 const initialState = {
@@ -64,6 +76,26 @@ const loginSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+      // Refresh token cases
+      .addCase(refreshToken.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(refreshToken.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.status = "succeeded";
+        state.isAuth = true;
+        // Update tokens but keep existing user info
+        console.log('Token refresh successful');
+      })
+      .addCase(refreshToken.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+        state.isAuth = false;
+        state.userInfo = null;
+        console.log('Token refresh failed:', action.payload);
+      })
+
       .addCase(getUserProfile.fulfilled, (state, action) => {
         console.log('getUserProfile.fulfilled payload:', action.payload);
         state.isLoading = false;

@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-import { setTokens } from "../../utils/storeToken";
+import { setTokens, getTokens } from "../../utils/storeToken";
 
 // get users
 export const getUsers = createAsyncThunk(
@@ -35,6 +35,37 @@ export const getDealerUserProfile = createAsyncThunk(
 );
 
 // get user profile and store token
+// Refresh token thunk
+export const refreshToken = createAsyncThunk(
+    "login/refreshToken",
+    async (_, thunkAPI) => {
+        try {
+            const tokens = getTokens();
+            if (!tokens?.refreshToken) {
+                throw new Error('No refresh token available');
+            }
+
+            const response = await axios.post(
+                `${import.meta.env.VITE_BACKEND_BASE_URL}/user/auth/refresh-token`,
+                { refreshToken: tokens.refreshToken }
+            );
+
+            console.log("response", response)
+
+            if (response.data?.accessToken) {
+                setTokens(
+                    response.data.accessToken,
+                    response.data.refreshToken || tokens.refreshToken
+                );
+                return response.data;
+            }
+            throw new Error('Failed to refresh token');
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
+
 export const getUserProfile = createAsyncThunk(
     "user/getUserProfile",
     async ({ uid, firebaseToken }, thunkAPI) => {
