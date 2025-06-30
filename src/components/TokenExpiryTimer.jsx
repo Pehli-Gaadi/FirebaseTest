@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import {
+  Box,
+  Typography,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -111,6 +113,19 @@ const TokenExpiryTimer = () => {
 
   return (
     <>
+      <Box
+        position="fixed"
+        top={16}
+        right={16}
+        bgcolor="rgba(0, 0, 0, 0.8)"
+        color="white"
+        padding={1}
+        borderRadius={1}
+        zIndex={9999}
+      >
+        <Typography variant="body2">{timeLeft}</Typography>
+      </Box>
+
       <Dialog
         open={showExpiryDialog}
         onClose={() => setShowExpiryDialog(false)}
